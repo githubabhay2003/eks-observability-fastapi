@@ -226,30 +226,30 @@ git --version
 ## Setup and Deployment
 This section describes the exact steps to provision infrastructure and deploy applications using Terraform and Helm. All steps reflect what was implemented in this project.
 
-### 1 Clone the Repository
+### 1. Clone the Repository
 ```bash
 git clone https://github.com/githubabhay2003/eks-observability-fastapi.git
 cd eks-observability/terraform
 ```
-### 2 Initialize Terraform
+### 2. Initialize Terraform
 Initialize Terraform and download required providers.
 
 ```bash
 terraform init
 ```
-### 3 Validate Terraform Configuration
+### 3. Validate Terraform Configuration
 Check the syntax and internal consistency of the configuration files.
 
 ```bash
 terraform validate
 ```
-### 4 Review the Execution Plan
+### 4. Review the Execution Plan
 Generate and review an execution plan to see what resources Terraform will create, modify, or destroy.
 
 ```bash
 terraform plan
 ```
-### 5 Apply Infrastructure and Kubernetes Resources
+### 5. Apply Infrastructure and Kubernetes Resources
 This command provisions:
 
 * **VPC, subnets, routing, NAT**
@@ -266,7 +266,7 @@ terraform apply
 ```
 Note: Confirm with yes when prompted.
 
-### 6 Configure kubectl Access (Bastion or Local)
+### 6. Configure kubectl Access (Bastion or Local)
 If running locally or after a rebuild, update your `kubeconfig` to point to the new cluster:
 
 ```bash
@@ -278,7 +278,7 @@ aws eks update-kubeconfig \
 ```bash
 kubectl get nodes
 ```
-### 7 Accessing Cluster Services (Manual, Expected)
+### 7. Accessing Cluster Services (Manual, Expected)
 For security and simplicity, no ingress is exposed. Local access is performed via port-forwarding.
 
 #### Grafana
@@ -314,7 +314,7 @@ kubectl port-forward svc/kube-prometheus-stack-alertmanager 9093:9093 -n monitor
 ```
 **Access URL: http://localhost:9093**
 
-### 8 Validate Application Metrics
+### 8. Validate Application Metrics
 Ensure that the Prometheus Operator has discovered the FastAPI `ServiceMonitor` and is successfully scraping metrics.
 
 **Check ServiceMonitor status:**
@@ -327,7 +327,7 @@ kubectl get servicemonitor -n monitoring
 2.  **Verify:** Locate the `fastapi` job entry.
 3.  **Check Status:** Ensure the endpoint state is **UP** (indicated by a green background/label).
 
-### 9 Destroy and Rebuild (Reproducibility Test)
+### 9. Destroy and Rebuild (Reproducibility Test)
 To validate full automation and ensure there are no manual dependencies, you can perform a reproducibility test.
 
 **To validate full automation:**
@@ -344,7 +344,7 @@ terraform apply
 
 ---
 
-### 1 Current Delivery Model (What Exists Now)
+### 1. Current Delivery Model (What Exists Now)
 
 At the current stage, the project uses a GitOps-ready but manually triggered workflow:
 
@@ -361,7 +361,7 @@ At the current stage, the project uses a GitOps-ready but manually triggered wor
 
 ---
 
-### 2 Intended CI/CD Flow (Design-Level)
+### 2. Intended CI/CD Flow (Design-Level)
 
 The repository is structured so that adding CI/CD requires no refactor, only automation.
 
@@ -382,7 +382,7 @@ The repository is structured so that adding CI/CD requires no refactor, only aut
 
 ---
 
-### 3 Example CI/CD Tools (Not Implemented Yet)
+### 3. Example CI/CD Tools (Not Implemented Yet)
 
 | Stage | Tool |
 | :--- | :--- |
@@ -394,7 +394,7 @@ The repository is structured so that adding CI/CD requires no refactor, only aut
 
 ---
 
-### 4 Why CI/CD Is Deferred in This Phase
+### 4. Why CI/CD Is Deferred in This Phase
 
 This project intentionally separates concerns:
 
@@ -410,7 +410,7 @@ This section outlines exact, repeatable steps to verify that the infrastructure,
 
 These steps are intentionally manual where appropriate and mirror real-world validation workflows.
 
-### 1 Infrastructure Verification (Terraform)
+### 1. Infrastructure Verification (Terraform)
 
 After terraform apply completes successfully:
 
@@ -433,7 +433,7 @@ This confirms that:
 - Bastion host is reachable
 - ECR repository exists
 
-### 2 Kubernetes Access Verification
+### 2. Kubernetes Access Verification
 
 SSH into the bastion host:
 
@@ -454,7 +454,7 @@ kubectl get nodes
 Expected:
 Worker nodes in Ready state
 
-### 3 Application Verification (FastAPI)
+### 3. Application Verification (FastAPI)
 
 Check FastAPI deployment:
 
@@ -470,7 +470,7 @@ Expected:
 - Prometheus-format metrics output
 - HTTP 200 response
 - 
-### 4 Monitoring Stack Verification
+### 4. Monitoring Stack Verification
 
 Check kube-prometheus-stack components:
 
@@ -485,7 +485,7 @@ Expected running components:
 - node-exporter
 - Prometheus Operator
 
-### 5 Prometheus Target Verification
+### 5. Prometheus Target Verification
 
 Port-forward Prometheus:
 
@@ -500,7 +500,7 @@ Verify:
 - fastapi target is UP
 - Kubernetes system targets are healthy
 
-### 6 ServiceMonitor Verification
+### 6. ServiceMonitor Verification
 
 Confirm ServiceMonitor exists:
 
@@ -516,7 +516,7 @@ Expected:
 - Endpoint /metrics
 - Scrape interval configured
 
-### 7 Grafana Verification
+### 7. Grafana Verification
 
 Port-forward Grafana:
 
@@ -541,7 +541,7 @@ Verify:
 - Prometheus datasource is configured
 - FastAPI metrics are queryable
 
-### 8 Alert Rules Verification
+### 8. Alert Rules Verification
 
 Verify PrometheusRules:
 
@@ -563,7 +563,7 @@ Restore service:
 ```bash
 kubectl scale deployment fastapi -n observability --replicas=2
 ```
-### 9 Rebuild-Safety Verification (Critical)
+### 9. Rebuild-Safety Verification (Critical)
 
 Run full teardown:
 
@@ -809,6 +809,7 @@ See the LICENSE file for full license text.
 **GitHub:** https://github.com/githubabhay2003  
 
 **LinkedIn:** https://www.linkedin.com/in/abhay-kumar-saini-571891264/
+
 
 
 
