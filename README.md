@@ -580,3 +580,142 @@ Expected:
 - No manual fixes
 - No orphaned resources
 - Monitoring stack fully functional again
+
+## Screenshots
+
+This section highlights the end-to-end observability setup, infrastructure provisioning, and alerting verification implemented in this project.
+
+### 1️⃣ Terraform Infrastructure Provisioning (Apply Successful)
+<img width="1919" height="1021" alt="Screenshot 2026-01-28 140849" src="https://github.com/user-attachments/assets/57b0487d-5a29-4f98-9e7b-12d6e1e64a40" />
+
+**Description:**  
+Terraform successfully provisions the complete AWS and Kubernetes infrastructure, including:
+
+- VPC and subnets
+- EKS cluster and node groups
+- Bastion host
+- Amazon ECR repository
+- kube-prometheus-stack via Helm
+- FastAPI ServiceMonitor
+
+The output confirms that all resources were created without errors and displays key outputs such as:
+
+- Bastion public IP
+- EKS cluster name
+- ECR repository URL
+- VPC and subnet IDs
+
+### 2️⃣ Amazon ECR – FastAPI Container Registry
+<img width="1919" height="963" alt="Screenshot 2026-01-28 140834" src="https://github.com/user-attachments/assets/2c522f0a-866e-4339-abe1-e5dfb36a7719" />
+
+**Description:**  
+This screenshot shows the private Amazon ECR repository created for the FastAPI application.  
+The repository is used to store container images that are deployed to the EKS cluster.
+
+**Key points:**
+
+- Private ECR repository
+- Encrypted using AES-256
+- Integrated with Terraform
+- Used by Kubernetes deployments
+
+### 3️⃣ Amazon EKS Cluster – Active and Healthy
+<img width="1919" height="969" alt="Screenshot 2026-01-28 140745" src="https://github.com/user-attachments/assets/136e767e-7a44-414e-a878-bd16423be799" />
+
+**Description:**  
+The Amazon EKS cluster is in an Active state and running a supported Kubernetes version.  
+This cluster serves as the core platform for deploying FastAPI and the observability stack.
+
+### 4️⃣ Amazon EC2 – Worker Nodes and Bastion Host
+<img width="1919" height="965" alt="Screenshot 2026-01-28 140722" src="https://github.com/user-attachments/assets/c3e12771-01a3-4f2d-9157-0df4a2a149f4" />
+
+**Description:**  
+This view shows all EC2 instances associated with the project:
+
+- Managed EKS worker nodes
+- Bastion host for secure cluster access
+
+All instances pass health checks, confirming a stable infrastructure layer.
+
+### 5️⃣ Prometheus Targets – Service Discovery Verified
+<img width="1919" height="953" alt="Screenshot 2026-01-28 140303" src="https://github.com/user-attachments/assets/ae9dc433-26e5-4e13-8a12-fb9c9dfac0ad" />
+
+**Description:**  
+Prometheus successfully discovers and scrapes metrics from:
+
+- FastAPI ServiceMonitor
+- Kubernetes components
+- Node exporters
+- kube-state-metrics
+- Alertmanager
+- Grafana
+
+All targets are UP, confirming correct ServiceMonitor and label configuration.
+
+### 6️⃣ Prometheus Alerts – FastAPI Rules Loaded
+<img width="1919" height="974" alt="Screenshot 2026-01-28 140319" src="https://github.com/user-attachments/assets/59568e88-670d-4682-8975-6b82eb5bdafa" />
+
+**Description:**  
+Custom Prometheus alert rules for FastAPI are successfully loaded, including:
+
+- High 5xx error rate
+- High latency (P95)
+- FastAPI pod down detection
+
+The rules appear under the `fastapi.rules` group and are actively evaluated by Prometheus.
+
+### 7️⃣ Alertmanager – Alert Routing and Status
+<img width="1107" height="896" alt="Screenshot 2026-01-27 174432" src="https://github.com/user-attachments/assets/42a61a24-1741-447d-9ff2-0e5e7d6a4ce7" />
+
+**Description:**  
+Alertmanager is operational and receiving alerts from Prometheus.  
+The UI shows grouped alerts, routing behavior, and alert states (active/inactive), validating the alert pipeline.
+
+### 8️⃣ Grafana – FastAPI Golden Signals Dashboard
+<img width="1919" height="913" alt="Screenshot 2026-01-28 135910" src="https://github.com/user-attachments/assets/a430266a-db2a-442a-91f5-82ed562b6ff7" />
+
+**Description:**  
+This dashboard visualizes FastAPI Golden Signals:
+
+- Request rate (RPS)
+- Error rate (5xx)
+- Latency (P95 / P99)
+- CPU usage
+- Memory usage
+
+Metrics are sourced directly from Prometheus and updated in near real time.
+
+### 9️⃣ Grafana – Prometheus Overview Dashboard
+<img width="1919" height="960" alt="Screenshot 2026-01-28 140111" src="https://github.com/user-attachments/assets/685e8cf4-3345-4a36-a3db-8294b6060a3d" />
+
+**Description:**  
+Provides a high-level view of Prometheus health and performance, including:
+
+- Target discovery
+- Scrape duration
+- Sample ingestion rate
+- Storage metrics
+
+Useful for monitoring the observability platform itself.
+
+### 🔟 Grafana – Kubernetes API Server Dashboard
+<img width="1919" height="959" alt="Screenshot 2026-01-28 140152" src="https://github.com/user-attachments/assets/700eef80-3acc-4c5b-b6ba-2e3bf654976d" />
+
+**Description:**  
+This dashboard tracks Kubernetes control-plane health, showing:
+
+- API availability
+- Request latency
+- Error rates
+- SLI/SLO metrics
+
+Confirms cluster stability and API server reliability.
+
+### 1️⃣1️⃣ Prometheus Alert Rules – FastAPI Application
+<img width="1886" height="913" alt="Screenshot 2026-01-27 170504" src="https://github.com/user-attachments/assets/265ab7ba-799c-4fb0-81d8-12a1abbb0889" />
+
+
+This screenshot shows custom PrometheusRule objects for the FastAPI application:
+- FastAPIHighErrorRate
+- FastAPIHighLatency
+- FastAPIPodDown
