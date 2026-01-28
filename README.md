@@ -719,3 +719,98 @@ This screenshot shows custom PrometheusRule objects for the FastAPI application:
 - FastAPIHighErrorRate
 - FastAPIHighLatency
 - FastAPIPodDown
+
+## Challenges and Learnings
+
+|  | Challenge | Root Cause | Approach Taken | Key Learning |
+|---|---------|-----------|----------------|--------------|
+| 1 | Terraform failed to create `ServiceMonitor` and `PrometheusRule` resources | Prometheus Operator CRDs were not yet available when Terraform applied Kubernetes manifests | Enforced strict resource ordering by deploying `kube-prometheus-stack` via Helm first and applying CRD-dependent resources only after Helm completion | CRDs must exist before creating custom Kubernetes resources; Helm releases installing CRDs should be treated as hard dependencies |
+| 2 | `namespace monitoring is being terminated` error during re-apply | Terraform attempted to recreate resources while the namespace was still in `Terminating` state after destroy | Verified namespace status and waited for full deletion before reapplying infrastructure | Kubernetes namespaces may take time to terminate; never reapply resources into terminating namespaces |
+| 3 | `kubernetes_manifest` schema validation errors | Non-Kubernetes fields like `depends_on` were incorrectly placed inside Kubernetes manifests | Moved Terraform meta-arguments (`depends_on`) to the resource level instead of inside the manifest block | `kubernetes_manifest` strictly validates against Kubernetes OpenAPI schema; Terraform logic must remain outside Kubernetes YAML |
+| 4 | Alertmanager port-forward timeout | Incorrect assumption about service ports and missing Alertmanager pods | Verified service configuration and pod availability before port-forwarding | Always inspect Kubernetes services and pods before attempting access; service ports must match target ports |
+| 5 | Alertmanager pods not found during restart attempts | Incorrect StatefulSet and pod naming assumptions | Used `kubectl get statefulsets` and `kubectl get pods` to identify correct resource names | Resource names created by Helm charts often differ from expected defaults; always query live cluster state |
+| 6 | Multiple system alerts firing unexpectedly | Control-plane components in managed EKS environments behave differently from self-managed clusters | Verified alert behavior in Prometheus UI and acknowledged expected behavior during bootstrap | Not all default alerts indicate real failures; alert tuning is required for managed Kubernetes services |
+| 7 | Email alert delivery failures in Alertmanager | SMTP configuration and secret handling required additional setup and validation | Temporarily disabled email notifications and focused on validating alerts in Alertmanager UI | Incremental observability implementation is critical; verify alert generation before configuring notification channels |
+| 8 | Helm release taking several minutes to complete | `kube-prometheus-stack` deploys multiple components and CRDs | Allowed sufficient timeout and monitored Helm release progress | Large Helm charts require patience and proper timeout handling |
+| 9 | Prometheus targets not appearing initially | ServiceMonitor label selector mismatch | Corrected labels to match `kube-prometheus-stack` release selector | Label consistency is critical for Prometheus target discovery |
+| 10 | End-to-end observability verification complexity | Multiple tools involved (EKS, Prometheus, Grafana, Alertmanager) | Verified each layer independently: targets, metrics, alerts, dashboards | Observability should be validated layer-by-layer, not assumed from successful deployment |
+
+##  Future Improvements
+
+The current implementation establishes a strong observability foundation. The following enhancements can further improve scalability, security, and production readiness:
+
+- **Alert Notification Integrations**
+  - Enable and validate Alertmanager integrations such as Slack, PagerDuty, or Opsgenie
+  - Implement alert grouping and routing strategies based on severity and service
+
+- **SLOs and Error Budgets**
+  - Define Service Level Objectives (SLOs) for FastAPI using Prometheus recording rules
+  - Track error budgets and integrate them into alerting decisions
+
+- **Autoscaling Enhancements**
+  - Introduce Horizontal Pod Autoscaler (HPA) based on custom Prometheus metrics
+  - Implement Cluster Autoscaler for dynamic node scaling
+
+- **Security Hardening**
+  - Enable IAM Roles for Service Accounts (IRSA)
+  - Enforce network policies for observability components
+  - Add secrets management using AWS Secrets Manager or External Secrets Operator
+
+- **CI/CD Automation**
+  - Add GitHub Actions pipeline for Terraform validation and deployment
+  - Implement automated image build and push to Amazon ECR
+
+- **Multi-Environment Support**
+  - Extend Terraform modules to support `dev`, `staging`, and `prod` environments
+  - Introduce environment-specific alert thresholds and dashboards
+
+---
+
+##  Repository Structure
+<img width="534" height="983" alt="Screenshot 2026-01-28 154954" src="https://github.com/user-attachments/assets/c6fbc2b0-2d9b-4284-846b-bad441375c5d" />
+
+## Contributing
+
+Contributions are welcome and encouraged.
+
+### Guidelines
+
+- Fork the repository
+- Create a feature branch
+
+```bash
+git checkout -b feature/your-feature-name
+```
+- Commit your changes with clear messages
+- Push to your fork and open a Pull Request
+- Ensure Terraform formatting and validation:
+```bash
+terraform fmt -recursive
+terraform validate
+```
+Please ensure changes are well-documented and aligned with existing project structure.
+
+## License
+
+This project is licensed under the MIT License.
+
+You are free to use, modify, and distribute this project with proper attribution.
+
+See the LICENSE file for full license text.
+
+## 👤 Author
+
+**Abhay Kumar Saini**
+
+**Role:** DevOps / Cloud Engineer  
+
+**Focus Areas:** AWS, Kubernetes, Terraform, Observability, SRE Practices  
+
+**GitHub:** https://github.com/githubabhay2003  
+
+**LinkedIn:** https://www.linkedin.com/in/abhay-kumar-saini-571891264/
+
+
+
+
+
