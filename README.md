@@ -403,3 +403,180 @@ This project intentionally separates concerns:
 * **Phase 3 (future):** CI/CD + GitOps + tracing
 
 This mirrors real-world production rollouts, where observability is validated before automating deployments.
+
+## Verification Steps
+
+This section outlines exact, repeatable steps to verify that the infrastructure, application, and observability stack are working correctly after a fresh terraform apply.
+
+These steps are intentionally manual where appropriate and mirror real-world validation workflows.
+
+### 1 Infrastructure Verification (Terraform)
+
+After terraform apply completes successfully:
+
+```bash
+terraform output
+```
+Verify that the following outputs exist:
+
+- eks_cluster_name
+- bastion_public_ip
+- vpc_id
+- public_subnet_ids
+- private_subnet_ids
+- ecr_repository_url
+
+This confirms that:
+
+- Networking is provisioned
+- EKS cluster is created
+- Bastion host is reachable
+- ECR repository exists
+
+### 2 Kubernetes Access Verification
+
+SSH into the bastion host:
+
+```bash
+ssh -i <key>.pem ec2-user@<bastion_public_ip>
+```
+Update kubeconfig:
+
+```bash
+aws eks update-kubeconfig \
+  --region us-east-1 \
+  --name eks-observability-cluster
+```
+Verify cluster access:
+```bash
+kubectl get nodes
+```
+Expected:
+Worker nodes in Ready state
+
+### 3 Application Verification (FastAPI)
+
+Check FastAPI deployment:
+
+```bash
+kubectl get pods -n observability
+kubectl get svc -n observability
+```
+Verify metrics endpoint is exposed:
+```bash
+kubectl exec -n observability deploy/fastapi -- curl localhost:8000/metrics
+```
+Expected:
+- Prometheus-format metrics output
+- HTTP 200 response
+- 
+### 4 Monitoring Stack Verification
+
+Check kube-prometheus-stack components:
+
+```bash
+kubectl get pods -n monitoring
+```
+Expected running components:
+- Prometheus
+- Alertmanager
+- Grafana
+- kube-state-metrics
+- node-exporter
+- Prometheus Operator
+
+### 5 Prometheus Target Verification
+
+Port-forward Prometheus:
+
+```bash
+kubectl port-forward svc/kube-prometheus-stack-prometheus 9090:9090 -n monitoring
+```
+In browser:
+```text
+http://localhost:9090/targets
+```
+Verify:
+- fastapi target is UP
+- Kubernetes system targets are healthy
+
+### 6 ServiceMonitor Verification
+
+Confirm ServiceMonitor exists:
+
+```bash
+kubectl get servicemonitor -n monitoring
+```
+Describe FastAPI ServiceMonitor:
+```bash
+kubectl describe servicemonitor fastapi -n monitoring
+```
+Expected:
+- Correct namespace selector (observability)
+- Endpoint /metrics
+- Scrape interval configured
+
+### 7 Grafana Verification
+
+Port-forward Grafana:
+
+```bash
+kubectl port-forward svc/kube-prometheus-stack-grafana 3000:80 -n monitoring
+```
+**Access: http://localhost:3000**
+
+Login:
+
+Username: admin
+
+Password: retrieved from Kubernetes secret
+
+```bash
+kubectl get secret kube-prometheus-stack-grafana \
+  -n monitoring \
+  -o jsonpath="{.data.admin-password}" | base64 -d
+```
+Verify:
+- Kubernetes dashboards are present
+- Prometheus datasource is configured
+- FastAPI metrics are queryable
+
+### 8 Alert Rules Verification
+
+Verify PrometheusRules:
+
+```bash
+kubectl get prometheusrule -n monitoring
+```
+Expected:
+- fastapi-alerts present
+- Default kube-prometheus rules present
+
+Trigger a test alert:
+```bash
+kubectl scale deployment fastapi -n observability --replicas=0
+```
+Then check in Prometheus UI:
+- Alert transitions to Firing
+
+Restore service:
+```bash
+kubectl scale deployment fastapi -n observability --replicas=2
+```
+### 9 Rebuild-Safety Verification (Critical)
+
+Run full teardown:
+
+```bash
+terraform destroy -auto-approve
+```
+Recreate:
+```bash
+terraform apply -auto-approve
+```
+**Re-run all checks above**
+
+Expected:
+- No manual fixes
+- No orphaned resources
+- Monitoring stack fully functional again
