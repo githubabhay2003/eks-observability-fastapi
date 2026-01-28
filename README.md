@@ -165,3 +165,241 @@ The project uses a modern, production-grade cloud-native stack focused on automa
 | **Authentication** | AWS IAM, `aws-auth` ConfigMap |
 | **Operating System** | Amazon Linux (Bastion), Ubuntu (EKS Nodes) |
 
+## Prerequisites
+
+Before deploying this project, ensure the following prerequisites are met. All tools listed below were explicitly used during the implementation.
+
+### 1. AWS Account
+An active AWS account with sufficient permissions to create EKS, EC2, IAM, VPC, and ECR resources.
+* **AWS Console:** [https://aws.amazon.com/console/](https://aws.amazon.com/console/)
+
+### 2. AWS CLI
+Used for authentication, EKS kubeconfig generation, and general AWS interaction.
+* **Install guide:** [AWS CLI Installation](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+* **Verify:**
+```bash
+aws --version
+```
+### 3. Terraform
+Used as the single source of truth for infrastructure and Kubernetes resources.
+
+- **Install guide:** [Official Installation Instructions](https://developer.hashicorp.com/terraform/install)
+- **Required version:** `>= 1.5.0`
+
+**Verify installation:**
+```bash
+terraform version
+```
+### 4. kubectl
+Used to interact with the EKS cluster from the bastion host and locally.
+
+- **Install guide:** [Official Installation Instructions](https://kubernetes.io/docs/tasks/tools/)
+- **Verify installation:**
+```bash
+kubectl version --client
+```
+### 5. Helm
+Used to deploy Kubernetes packages such as FastAPI and kube-prometheus-stack.
+
+- **Install guide:** [Official Installation Instructions](https://helm.sh/docs/intro/install/)
+- **Verify installation:**
+```bash
+helm version
+```
+### 6. Docker
+Used to build the FastAPI container image locally before pushing to Amazon ECR.
+
+- **Install guide:** [Official Installation Instructions](https://docs.docker.com/get-docker/)
+- **Verify installation:**
+```bash
+docker version
+```
+### 7. Git
+Used for version control and repository management.
+
+- **Install guide:** [Official Installation Instructions](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
+- **Verify installation:**
+```bash
+git --version
+```
+
+## Setup and Deployment
+This section describes the exact steps to provision infrastructure and deploy applications using Terraform and Helm. All steps reflect what was implemented in this project.
+
+### 1 Clone the Repository
+```bash
+git clone https://github.com/githubabhay2003/eks-observability-fastapi.git
+cd eks-observability/terraform
+```
+### 2 Initialize Terraform
+Initialize Terraform and download required providers.
+
+```bash
+terraform init
+```
+### 3 Validate Terraform Configuration
+Check the syntax and internal consistency of the configuration files.
+
+```bash
+terraform validate
+```
+### 4 Review the Execution Plan
+Generate and review an execution plan to see what resources Terraform will create, modify, or destroy.
+
+```bash
+terraform plan
+```
+### 5 Apply Infrastructure and Kubernetes Resources
+This command provisions:
+
+* **VPC, subnets, routing, NAT**
+* **EKS cluster and managed node group**
+* **Bastion EC2 instance**
+* **aws-auth ConfigMap**
+* **Kubernetes namespaces**
+* **FastAPI deployment via Helm**
+* **kube-prometheus-stack via Helm**
+* **ServiceMonitor and PrometheusRule objects**
+
+```bash
+terraform apply
+```
+Note: Confirm with yes when prompted.
+
+### 6 Configure kubectl Access (Bastion or Local)
+If running locally or after a rebuild, update your `kubeconfig` to point to the new cluster:
+
+```bash
+aws eks update-kubeconfig \
+  --region us-east-1 \
+  --name eks-observability-cluster
+```
+**Verify cluster access:**
+```bash
+kubectl get nodes
+```
+### 7 Accessing Cluster Services (Manual, Expected)
+For security and simplicity, no ingress is exposed. Local access is performed via port-forwarding.
+
+#### Grafana
+Run the following command to access the Grafana dashboard:
+
+```bash
+kubectl port-forward svc/kube-prometheus-stack-grafana 3000:80 -n monitoring
+```
+**Credentials:**
+
+* **Username:** `admin`
+* **Password:** Retrieved from the Kubernetes secret by running:
+
+```bash
+kubectl get secret kube-prometheus-stack-grafana \
+  -n monitoring \
+  -o jsonpath="{.data.admin-password}" | base64 --decode
+```
+**Access URL: http://localhost:3000**
+#### Prometheus
+Run the following command to access the Prometheus expression browser:
+
+```bash
+kubectl port-forward svc/kube-prometheus-stack-prometheus 9090:9090 -n monitoring
+```
+**Access URL: http://localhost:9090**
+
+#### Alertmanager
+Run the following command to access the Alertmanager UI:
+
+```bash
+kubectl port-forward svc/kube-prometheus-stack-alertmanager 9093:9093 -n monitoring
+```
+**Access URL: http://localhost:9093**
+
+### 8 Validate Application Metrics
+Ensure that the Prometheus Operator has discovered the FastAPI `ServiceMonitor` and is successfully scraping metrics.
+
+**Check ServiceMonitor status:**
+```bash
+kubectl get servicemonitor -n monitoring
+```
+**Confirm FastAPI targets in Prometheus:**
+
+1.  **Navigate:** In the Prometheus UI ([http://localhost:9090](http://localhost:9090)), go to **Status** → **Targets**.
+2.  **Verify:** Locate the `fastapi` job entry.
+3.  **Check Status:** Ensure the endpoint state is **UP** (indicated by a green background/label).
+
+### 9 Destroy and Rebuild (Reproducibility Test)
+To validate full automation and ensure there are no manual dependencies, you can perform a reproducibility test.
+
+**To validate full automation:**
+```bash
+terraform destroy
+terraform apply
+```
+**After re-apply, only port-forward commands are required again. No manual cluster setup is needed.**
+
+## CI/CD Pipeline Explanation
+
+**Status:** Partially implemented by design  
+**Reason:** This project intentionally focuses on infrastructure and observability first. CI/CD is scoped as a follow-up enhancement.
+
+---
+
+### 1 Current Delivery Model (What Exists Now)
+
+At the current stage, the project uses a GitOps-ready but manually triggered workflow:
+
+* **Source of truth:** GitHub repository
+* **Infrastructure provisioning:** Terraform (manual execution)
+* **Application deployment:** Helm (invoked via Terraform)
+* **Observability stack:** Helm (kube-prometheus-stack via Terraform)
+
+**This ensures:**
+
+* Fully reproducible environments
+* Deterministic infrastructure state
+* Clean separation between infra, app, and observability
+
+---
+
+### 2 Intended CI/CD Flow (Design-Level)
+
+The repository is structured so that adding CI/CD requires no refactor, only automation.
+
+**Planned pipeline stages:**
+
+1.  **Code Commit (GitHub)**
+    * FastAPI code changes
+    * Terraform / Helm changes
+2.  **CI Stage**
+    * Lint FastAPI code
+    * Run unit tests
+    * Build Docker image
+    * Push image to Amazon ECR
+3.  **CD Stage**
+    * Terraform plan (dry-run)
+    * Terraform apply (approved environments)
+    * Helm upgrade triggered automatically
+
+---
+
+### 3 Example CI/CD Tools (Not Implemented Yet)
+
+| Stage | Tool |
+| :--- | :--- |
+| **CI** | GitHub Actions |
+| **Image Build** | Docker |
+| **Registry** | Amazon ECR |
+| **CD** | Terraform + Helm |
+| **Secrets** | GitHub Secrets / AWS Secrets Manager |
+
+---
+
+### 4 Why CI/CD Is Deferred in This Phase
+
+This project intentionally separates concerns:
+
+* **Phase 1:** Infrastructure foundation
+* **Phase 2:** Kubernetes-native observability
+* **Phase 3 (future):** CI/CD + GitOps + tracing
+
+This mirrors real-world production rollouts, where observability is validated before automating deployments.
