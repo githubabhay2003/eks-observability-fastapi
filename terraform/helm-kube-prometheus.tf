@@ -4,6 +4,10 @@ resource "helm_release" "kube_prometheus_stack" {
   repository = "https://prometheus-community.github.io/helm-charts"
   chart      = "kube-prometheus-stack"
   version    = "81.2.2"
+  depends_on = [
+    kubernetes_namespace_v1.monitoring
+  ]
+
 
   values = [yamlencode({
 

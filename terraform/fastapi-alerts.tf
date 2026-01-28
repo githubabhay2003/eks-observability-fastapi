@@ -65,6 +65,7 @@ resource "kubernetes_manifest" "fastapi_alerts" {
               annotations = {
                 summary = "FastAPI is down"
                 description = "No FastAPI pods are reachable"
+
               }
             }
           ]
