@@ -10,6 +10,7 @@ A fully automated, rebuild-safe Kubernetes observability platform on AWS EKS usi
 ![Grafana](https://img.shields.io/badge/Grafana-Visualization-orange)
 ![Status](https://img.shields.io/badge/Status-Production--Ready-green)
 
+
 - [Overview](#overview)
 - [Skills Demonstrated](#skills-demonstrated)
 - [Architecture](#architecture)
@@ -106,8 +107,8 @@ This project demonstrates practical, production-oriented skills across cloud inf
 ## Architecture
 
 ### Visual Overview
-> [!IMPORTANT]
-> [Architecture diagram to be added here – showing AWS VPC, EKS, namespaces, and observability stack]
+<img width="2816" height="1536" alt="Gemini_Generated_Image_yth7y0yth7y0yth7" src="https://github.com/user-attachments/assets/5a5bb5b3-30a6-42fb-bc32-88a0d732ca64" />
+
 
 ### High-Level Architecture Overview
 This project implements a Kubernetes-native observability platform on AWS using Amazon EKS. The architecture is designed to be secure, modular, and rebuild-safe using Infrastructure as Code (Terraform).
@@ -809,6 +810,7 @@ See the LICENSE file for full license text.
 **GitHub:** https://github.com/githubabhay2003  
 
 **LinkedIn:** https://www.linkedin.com/in/abhay-kumar-saini-571891264/
+
 
 
 
